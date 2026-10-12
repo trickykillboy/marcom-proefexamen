@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f4ef">
+  <title>MARCOM — Proefexamen</title>
+  <style>
+    :root { color-scheme:light; --ink:#1e2b28; --muted:#63716b; --paper:#fbfaf6; --line:#d9dfd8; --green:#216b52; --mint:#e4f1e9; --red:#a33a35; --redbg:#f9e8e5; --white:#fff; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--paper); color:var(--ink); font:16px/1.55 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    main { width:min(920px,calc(100% - 32px)); margin:0 auto; padding:38px 0 60px; }
+    header { margin-bottom:25px; }
+    .eyebrow { color:var(--green); font-size:.78rem; font-weight:800; letter-spacing:.14em; text-transform:uppercase; }
+    h1 { margin:5px 0 7px; font-size:clamp(1.9rem,4vw,2.8rem); line-height:1.08; letter-spacing:-.04em; }
+    .intro { color:var(--muted); max-width:700px; margin:0; }
+    .setup { background:var(--white); border:1px solid var(--line); border-radius:18px; padding:20px; display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin:22px 0; }
+    .setup label { font-weight:750; }
+    select,button { font:inherit; }
+    select { border:1px solid var(--line); border-radius:10px; background:#fff; color:var(--ink); padding:10px 36px 10px 12px; }
+    button { border:1px solid var(--line); border-radius:10px; background:#fff; color:var(--ink); padding:10px 15px; font-weight:750; cursor:pointer; }
+    button:hover { transform:translateY(-1px); }
+    button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible { outline:3px solid #8bc4a7; outline-offset:2px; }
+    .primary { background:var(--green); border-color:var(--green); color:#fff; }
+    .subtle { color:var(--muted); font-size:.9rem; flex:1 1 250px; }
+    .result { display:none; margin:20px 0; padding:18px 20px; border-radius:14px; background:var(--mint); border:1px solid #c5dfce; }
+    .result h2 { margin:0 0 4px; font-size:1.2rem; }
+    .result p { margin:0; }
+    .chapter-title { margin:30px 0 12px; padding-bottom:7px; border-bottom:1px solid var(--line); color:var(--green); font-size:1.08rem; }
+    .question { background:var(--white); border:1px solid var(--line); border-radius:16px; padding:20px; margin:12px 0; break-inside:avoid; }
+    .question h3 { margin:0 0 14px; font-size:1.04rem; line-height:1.45; }
+    .number { color:var(--green); font-size:.82rem; font-weight:800; letter-spacing:.06em; margin-right:7px; }
+    .options { display:grid; gap:8px; }
+    .option { display:flex; gap:10px; align-items:flex-start; padding:10px 12px; border:1px solid var(--line); border-radius:11px; cursor:pointer; }
+    .option:hover { background:#f7faf7; }
+    .option input { margin:5px 0 0; accent-color:var(--green); flex:none; }
+    textarea { width:100%; min-height:84px; resize:vertical; border:1px solid var(--line); border-radius:11px; padding:11px 12px; color:var(--ink); background:#fff; font:inherit; }
+    .model { display:none; margin-top:15px; padding:13px 15px; border-left:4px solid var(--green); background:#f3f8f4; border-radius:0 10px 10px 0; }
+    .model strong { display:block; margin-bottom:4px; color:var(--green); }
+    .mark { display:none; margin-top:10px; font-size:.9rem; font-weight:750; }
+    .question.correct { border-color:#a7d2b5; }
+    .question.incorrect { border-color:#e3aaa5; }
+    .question.correct .mark { display:block; color:var(--green); }
+    .question.incorrect .mark { display:block; color:var(--red); }
+    .submit-row { display:flex; align-items:center; flex-wrap:wrap; gap:10px; margin-top:24px; }
+    .submit-row .note { color:var(--muted); font-size:.9rem; }
+    .hidden { display:none !important; }
+    @media print { body { background:#fff; } main { width:100%; padding:0; } .setup,.submit-row,.result,.model,.mark { display:none !important; } .question { box-shadow:none; } textarea { min-height:60px; } }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="eyebrow">Studeren · MARCOM</div>
+    <h1>Proefexamen</h1>
+    <p class="intro">35 vragen over alle vier hoofdstukken: negen vragen per hoofdstuk voor hoofdstuk 1, 2 en 3, en acht voor hoofdstuk 4. De set bevat zowel open als meerkeuzevragen.</p>
+  </header>
+  <section class="setup" id="setup">
+    <strong>Gemengde versie · 35 vragen</strong>
+    <button class="primary" id="start" type="button">Start examen</button>
+    <span class="subtle">Meerkeuze wordt automatisch nagekeken. Bij open vragen krijg je modelantwoorden om zelf te vergelijken.</span>
+  </section>
+  <section class="result" id="result" aria-live="polite"></section>
+  <form id="exam" class="hidden"></form>
+  <div class="submit-row hidden" id="submitRow">
+    <button class="primary" id="submit" type="button">Lever examen in</button>
+    <button id="restart" type="button">Opnieuw beginnen</button>
+    <span class="note" id="submitNote">Je kunt je antwoorden aanpassen tot je inlevert.</span>
+  </div>
+</main>
+<script>
+const chapterNames = {
+  1:"Hoofdstuk 1 · Kickstart MARCOM",
+  2:"Hoofdstuk 2 · Marketing en communicatie",
+  3:"Hoofdstuk 3 · Data",
+  4:"Hoofdstuk 4 · Trends"
+};
+const questions = [
+  {c:1,q:"Noem de vier leerlijnen van de opleiding en leg kort uit waarop elke lijn focust.",a:"De MARCOM-leerlijn (focus op marketing of communicatie in het tweede jaar), de supportleerlijn (ondersteunende vaardigheden zoals talen en ICT), werkplekleren (het vak in de praktijk leren) en professionele ontwikkeling (soft skills en jezelf als professional ontwikkelen).",o:["MARCOM, support, werkplekleren en professionele ontwikkeling.","Marketing, verkoop, boekhouding en HR.","Theorie, examens, stages en onderzoek.","Communicatie, design, sales en management."],k:0},
+  {c:1,q:"Waarom start de opleiding met Kickstart MARCOM? Noem minstens drie redenen.",a:"Je leert het verschil en de overlap tussen marketing en communicatie, maakt kennis met belangrijke MARCOM-attitudes, theorieën en modellen, en leert het vakjargon.",o:["Om meteen één specialisatie vast te leggen en andere leerlijnen te vervangen.","Om het verschil en de overlap te leren kennen, attitudes en theorieën te ontdekken en het vakjargon te leren.","Om uitsluitend verkooptechnieken en boekhouding te oefenen.","Om studenten al vóór de lessen aan een werkgever toe te wijzen."],k:1},
+  {c:1,q:"Welke vier attitudes staan op het MARCOM-kompas?",a:"Doelgroepgericht werken, datagestuurd werken, rekening houden met trends en innovaties, en rekening houden met stakeholders.",o:["Creativiteit, snelheid, overtuigingskracht en leiderschap.","Doelgroepgericht werken, datagestuurd werken, trends en innovaties volgen, en rekening houden met stakeholders.","Planning, budgetbeheer, personeelsbeleid en verkoop.","Onderzoeken, schrijven, presenteren en ontwerpen."],k:1},
+  {c:1,q:"Leg het verschil uit tussen doelgroepgericht en datagestuurd werken.",a:"Doelgroepgericht werken vertrekt vanuit wat de doelgroep nodig heeft en hoe die iets wil beleven. Datagestuurd werken baseert keuzes op data in plaats van vooral op buikgevoel.",o:["Doelgroepgericht werken gaat over collega's; datagestuurd werken gaat over concurrenten.","Doelgroepgericht werken vertrekt vanuit de doelgroep; datagestuurd werken baseert keuzes op gegevens.","Beide betekenen dat je beslissingen alleen op buikgevoel neemt.","Doelgroepgericht werken is alleen voor communicatie; datagestuurd werken alleen voor HR."],k:1},
+  {c:1,q:"Welke twee attitudes staan centraal in het MARCOM-kompas? Geef ook één voorbeeld van een stakeholder.",a:"Kritisch zijn en probleemoplossend denken. Een stakeholder kan bijvoorbeeld een collega, overheid of buur zijn die impact van een project ondervindt.",o:["Creativiteit en empathie; een stakeholder is alleen de klant.","Kritisch zijn en probleemoplossend denken; bijvoorbeeld een collega, overheid of buur.","Datagestuurd werken en plannen; stakeholders zijn alleen managers.","Trends volgen en verkopen; stakeholders zijn uitsluitend aandeelhouders."],k:1},
+  {c:1,q:"Een team past content aan op basis van doelgroepvoorkeuren én campagnecijfers. Welke twee MARCOM-attitudes zie je hier?",a:"Doelgroepgericht werken en datagestuurd werken: het team houdt rekening met wat de doelgroep wil en gebruikt gegevens om keuzes te maken.",o:["Doelgroepgericht en datagestuurd werken.","Alleen probleemoplossend denken.","Alleen rekening houden met stakeholders.","Professionele ontwikkeling en werkplekleren."],k:0},
+  {c:1,q:"Wat is het doel van de leerlijn professionele ontwikkeling?",a:"Werken aan soft skills en jezelf ontwikkelen als professional.",o:["Alleen talen en ICT-skills leren.","Werken aan soft skills en jezelf als professional ontwikkelen.","Uitsluitend marketingcampagnes uitvoeren.","De verkoopcijfers van een bedrijf analyseren."],k:1},
+  {c:1,q:"Wat leer je in de supportleerlijn? Geef twee voorbeelden van ondersteunende vaardigheden.",a:"Ondersteunende vaardigheden, bijvoorbeeld talen en ICT-skills.",o:["Alleen trends spotten en advertenties maken.","Ondersteunende vaardigheden, zoals talen en ICT-skills.","Uitsluitend werken met klanten en leveranciers.","Alleen strategische leidinggeven en analyseren."],k:1},
+  {c:1,q:"Welke attitude past bij het besef dat een project impact kan hebben op collega's, overheden of buren?",a:"Rekening houden met stakeholders.",o:["Datagestuurd werken.","Rekening houden met stakeholders.","Brand building.","Productontwikkeling."],k:1},
+
+  {c:2,q:"Definieer marketing en beschrijf het uiteindelijke doel ervan.",a:"Marketing is het proces waarbij organisaties waarde voor klanten creëren en sterke klantenrelaties opbouwen om waarde van klanten terug te krijgen. Het doel is de klant zo goed te begrijpen dat het aanbod aansluit op diens behoeften en verkoop wordt gestimuleerd.",o:["Marketing is alleen reclame maken om zoveel mogelijk mensen te bereiken.","Marketing creëert waarde voor klanten en bouwt relaties op, zodat de organisatie ook waarde van klanten terugkrijgt.","Marketing is interne communicatie tussen medewerkers.","Marketing is het verzamelen van persoonsgegevens zonder verdere analyse."],k:1},
+  {c:2,q:"Noem vijf typische taken van een marketingafdeling.",a:"Marktanalyse en -onderzoek; productontwikkeling en innovatie; brand building; promotie; analyseren en evalueren van resultaten.",o:["Marktanalyse, productontwikkeling, brand building, promotie, analyseren en evalueren.","Personeelsselectie, boekhouding, logistiek, juridisch advies en klantenservice.","Alleen reclame, verkoopgesprekken, facturatie, HR en IT.","Interne nieuwsbrieven, persconferenties, vertalingen, evenementen en loonbeheer."],k:0},
+  {c:2,q:"Beschrijf de onderdelen van het communicatieproces en leg encoderen en decoderen uit.",a:"Een zender stuurt een boodschap via een medium naar een ontvanger. Encoderen is het idee omzetten in woorden, beelden of cijfers; decoderen is de betekenis die de ontvanger eraan geeft. Ruis kan begrip verstoren en feedback is de reactie van de ontvanger.",o:["Zender, boodschap, medium, ontvanger, encoderen, decoderen, ruis en feedback.","Product, prijs, plaats, promotie en winst.","Doelgroep, concurrent, budget en kwartaalcijfers.","Alleen zender en ontvanger; feedback en ruis horen niet bij communicatie."],k:0},
+  {c:2,q:"Wat is het verschil tussen corporate communicatie en marketingcommunicatie?",a:"Corporate communicatie verbindt de organisatie met medewerkers en de buitenwereld en bouwt aan haar reputatie. Marketingcommunicatie beïnvloedt klanten en wil hun kennis, mening of gedrag veranderen om aankoop te stimuleren.",o:["Corporate communicatie richt zich alleen op verkoop; marketingcommunicatie alleen op medewerkers.","Corporate communicatie bouwt aan relaties en reputatie; marketingcommunicatie beïnvloedt klanten met het oog op aankoop.","Er is geen verschil: beide betekenen uitsluitend persberichten schrijven.","Corporate communicatie is visueel; marketingcommunicatie is altijd mondeling."],k:1},
+  {c:2,q:"Welke drie functieniveaus bestaan er binnen marketing en communicatie? Leg kort uit wat op elk niveau gebeurt.",a:"Leiden en analyseren: strategie bepalen en analyses uitvoeren. Aansturen en opvolgen: strategie vertalen naar concrete plannen en teams of projecten aansturen. Uitvoeren en ondersteunen: concrete taken en projecten realiseren.",o:["Leiden en analyseren; aansturen en opvolgen; uitvoeren en ondersteunen.","Onderzoeken; verkopen; factureren.","Intern; extern; internationaal.","Junior; stagiair; klant."],k:0},
+  {c:2,q:"Noem de drie vormen waarin communicatie kan voorkomen en geef één voorbeeld per vorm.",a:"Geschreven communicatie (bijvoorbeeld een mail), gesproken communicatie (bijvoorbeeld een interview) en visuele communicatie (bijvoorbeeld een infographic).",o:["Geschreven, gesproken en visueel.","Intern, extern en commercieel.","Digitaal, winstgevend en strategisch.","Zender, ontvanger en feedback."],k:0},
+  {c:2,q:"Welke functies horen bij de communicatieafdeling? Noem minstens drie voorbeelden.",a:"Bijvoorbeeld communications director, PR-specialist, copywriter en content creator.",o:["Communications director, PR-specialist, copywriter en content creator.","Product manager, boekhouder, inkoper en HR-manager.","Webanalist, ERP-beheerder, accountant en logistiek planner.","Alleen marketing director en product manager."],k:0},
+  {c:2,q:"Leg uit hoe marketing en communicatie zich richten op verschillende groepen en doelen.",a:"Marketing is vooral klantgericht en wil waarde creëren en verkoop stimuleren. Communicatie richt zich op doelgroepen en stakeholders, binnen en buiten de organisatie, bijvoorbeeld om te informeren, relaties te onderhouden of reputatie op te bouwen.",o:["Marketing richt zich op klanten en verkoop; communicatie op doelgroepen en stakeholders met doelen zoals informeren en reputatie opbouwen.","Marketing richt zich alleen op medewerkers; communicatie alleen op verkoop.","Marketing en communicatie hebben altijd hetzelfde doel en dezelfde doelgroep.","Marketing is intern; communicatie bestaat uitsluitend uit advertenties."],k:0},
+  {c:2,q:"Welke functie past bij het niveau uitvoeren en ondersteunen?",a:"Bijvoorbeeld content creator, marketingassistent, communicatieassistent, content planner of customer care assistant.",o:["Marketing director.","Communications director.","Content creator.","Afdelingshoofd strategie."],k:2},
+
+  {c:3,q:"Leg het verschil uit tussen data, informatie en inzicht.",a:"Data zijn de ruwe cijfers die je meet. Informatie is de betekenis die je aan de cijfers geeft. Inzicht is wat je op basis daarvan besluit of doet.",o:["Data zijn ruwe metingen; informatie geeft ze betekenis; inzicht bepaalt wat je ermee doet.","Data zijn conclusies; informatie zijn advertenties; inzicht is een database.","Data en informatie zijn hetzelfde; inzicht is een dashboard.","Data zijn meningen; informatie is buikgevoel; inzicht is promotie."],k:0},
+  {c:3,q:"Wat zijn drie bronnen waaruit een organisatie data kan halen? Geef per bron een voorbeeld.",a:"Marktonderzoek (bijvoorbeeld wensen of koopgedrag), bedrijfsresultaten (verkoop, omzet of winst) en campagneresultaten (prestaties tijdens of na een campagne).",o:["Marktonderzoek, bedrijfsresultaten en campagneresultaten.","Websites, vergaderingen en personeelsfeesten.","Alleen sociale media, enquêtes en concurrenten.","CRM, ERP en dashboards."],k:0},
+  {c:3,q:"Wat is een KPI, en wanneer bepaal je die?",a:"Een KPI is een duidelijke, meetbare waarde die aan een doel gekoppeld is en laat zien of je dat doel bereikt. Je bepaalt KPI’s vóór de start van de campagne.",o:["Een KPI is een meetbare waarde gekoppeld aan een doel; je bepaalt die vóór de campagne.","Een KPI is een klantendatabase die je na een campagne aanmaakt.","Een KPI is een advertentietype zonder meetbaar doel.","Een KPI is een rapport dat alleen de omzet van vorig jaar bevat."],k:0},
+  {c:3,q:"Leg het verschil uit tussen een CRM-systeem en een ERP-systeem.",a:"CRM brengt klantgegevens en klantactiviteiten samen en ondersteunt klantrelaties. ERP verzamelt en automatiseert belangrijke interne processen, zoals financiën, HR, verkoop en aankoop.",o:["CRM richt zich op klantgegevens en klantcontact; ERP richt zich op interne organisatieprocessen.","CRM is alleen voor boekhouding; ERP is alleen voor sociale media.","CRM en ERP zijn allebei uitsluitend analysetools voor websites.","ERP beheert alleen klanten; CRM beheert alle interne processen."],k:0},
+  {c:3,q:"Noem de drie categorieën analysetools en geef van minstens één categorie een voorbeeld.",a:"Web- en app-analytics (bijvoorbeeld Google Analytics), socialemedia-analytics (native platformstatistieken of managementtools) en dashboarding- en rapportagetools (bijvoorbeeld Google Data Studio of Power BI).",o:["Web- en app-analytics, socialemedia-analytics, dashboarding- en rapportagetools.","CRM, ERP en e-mail.","Marktonderzoek, winstberekening en productontwikkeling.","Online, offline en print."],k:0},
+  {c:3,q:"Wat is het verschil tussen een database en een dashboard?",a:"Een database bewaart gegevens geordend, bijvoorbeeld klantgegevens. Een dashboard toont een overzicht waarin je data kunt filteren en visueel weergeven, bijvoorbeeld in grafieken of tabellen.",o:["Een database bewaart data geordend; een dashboard toont data overzichtelijk en visueel.","Een database is een campagne; een dashboard is een klant.","Een database toont alleen grafieken; een dashboard bewaart uitsluitend persoonsgegevens.","Er is geen verschil tussen beide."],k:0},
+  {c:3,q:"Noem drie voordelen van correct datagebruik voor een organisatie.",a:"Meer inkomsten, meer efficiëntie en betere beslissingen.",o:["Meer inkomsten, meer efficiëntie en betere beslissingen.","Meer ruis, minder inzicht en tragere beslissingen.","Meer volgers, meer likes en meer vergaderingen.","Alleen lagere personeelskosten."],k:0},
+  {c:3,q:"Waarom zijn offline campagnes moeilijker te meten dan online campagnes?",a:"Online kun je veel gedrag en interacties volgen. Offline moet je vaak schatten hoeveel mensen de boodschap zagen; je weet minder zeker of ze die opmerkten of wat het effect was.",o:["Offline campagnes leveren altijd meer data op dan online campagnes.","Bij offline campagnes moet je vaak schatten hoeveel mensen de boodschap zagen en wat het effect was.","Online gedrag kan nooit worden gemeten.","Offline campagnes hebben altijd een lagere kost."],k:1},
+  {c:3,q:"Welke systemen zijn voorbeelden van CRM en welke teams gebruiken zo'n systeem?",a:"HubSpot, Salesforce en Teamleader zijn voorbeelden van CRM-systemen. Marketing, sales en klantenservice gebruiken ze.",o:["HubSpot, Salesforce en Teamleader; onder meer marketing, sales en klantenservice gebruiken ze.","SAP en Odoo; alleen HR gebruikt ze.","Google Analytics en Power BI; alleen communicatie gebruikt ze.","Instagram en TikTok; alleen klanten gebruiken ze."],k:0},
+
+  {c:4,q:"Wat is een trend en wat houdt trendwatching in?",a:"Een trend is een maatschappelijke ontwikkeling die langer dan een seizoen duurt en de vraag naar goederen of diensten kan beïnvloeden. Trendwatching is trends signaleren, volgen, analyseren en erop anticiperen.",o:["Een trend is elke tijdelijke advertentie; trendwatching is reclame inkopen.","Een trend is een ontwikkeling op langere termijn; trendwatching is die signaleren, volgen, analyseren en erop anticiperen.","Een trend is een wekelijkse verkoopactie; trendwatching is verkoop rapporteren.","Een trend is een product; trendwatching is een product lanceren."],k:1},
+  {c:4,q:"Leg het verschil uit tussen mega-, macro- en microtrends.",a:"Een megatrend beïnvloedt de hele samenleving en ontwikkelt langzaam. Een macrotrend komt voort uit veranderende behoeften van een breed publiek. Een microtrend is vaak een concretere innovatie of productinvulling van een macrotrend.",o:["Mega is kort en lokaal; macro is één product; micro beïnvloedt de hele samenleving.","Megatrends beïnvloeden de samenleving; macrotrends hangen samen met brede consumentenbehoeften; microtrends zijn concreter en vaak productgericht.","Mega, macro en micro verschillen alleen in populariteit op sociale media.","Microtrends duren het langst en hebben de grootste maatschappelijke impact."],k:1},
+  {c:4,q:"Wat is een hype of rage, en hoe verschilt die van een trend?",a:"Een hype of rage krijgt in korte tijd veel aandacht. Een trend is een ontwikkeling op langere termijn die langer dan een seizoen aanhoudt.",o:["Een hype duurt altijd langer dan een megatrend.","Een hype krijgt kortstondig veel aandacht; een trend houdt langer aan.","Een hype is een macrotrend die de hele samenleving beïnvloedt.","Er is geen verschil tussen een hype en een trend."],k:1},
+  {c:4,q:"Noem drie manieren om op de hoogte te blijven van trends.",a:"Bijvoorbeeld trainingen en webinars, beurzen en events, vakmedia en LinkedIn.",o:["Trainingen en webinars, beurzen en events, vakmedia en LinkedIn.","Alleen televisie kijken en folders lezen.","Alleen verkoopcijfers bekijken.","Alleen klantenserviceberichten beantwoorden."],k:0},
+  {c:4,q:"Wat is het verschil tussen AR en VR? Geef bij AR het voorbeeld uit de cursus.",a:"AR (augmented reality) voegt digitale informatie toe aan de echte omgeving; met een app kun je bijvoorbeeld zien hoe een nieuwe zetel in je woonkamer staat. VR (virtual reality) plaatst je in een virtuele omgeving.",o:["AR is een digitale laag over de echte omgeving, zoals een zetel virtueel in je woonkamer plaatsen; VR is een virtuele omgeving.","AR en VR betekenen allebei korte video’s.","AR is klantdata analyseren; VR is een chatbot gebruiken.","AR is communiceren via DM’s; VR is een influencer inzetten."],k:0},
+  {c:4,q:"Noem drie trends uit het hoofdstuk en geef bij één ervan een concreet voorbeeld.",a:"Voorbeelden zijn duurzaamheid (plasticvrije verpakkingen), personalisatie (mails op maat), AI en automatisering (een chatbot), conversational marketing (WhatsApp of DM), influencer marketing, phygital experiences, short-form video, transparantie, community building, privacy, data-driven marketing, inclusieve communicatie, VR, AR, purpose-driven branding en de metaverse.",o:["Duurzaamheid, personalisatie en AI/automatisering; bijvoorbeeld een chatbot die dag en nacht vragen beantwoordt.","Boekhouding, logistiek en facturatie; bijvoorbeeld een jaarrekening.","Zender, ontvanger en ruis; bijvoorbeeld een nieuwsbrief.","CRM, ERP en dashboarding; bijvoorbeeld een klantendatabase."],k:0},
+  {c:4,q:"Waarom is privacy een aandachtspunt bij marketing met klantgegevens?",a:"Omdat er wet- en regelgeving geldt voor het werken met klantgegevens.",o:["Omdat klantgegevens nooit gebruikt mogen worden.","Omdat er wet- en regelgeving geldt voor het werken met klantgegevens.","Omdat privacy alleen over advertenties op tv gaat.","Omdat je met privacy geen campagnes kunt meten."],k:1},
+  {c:4,q:"Wat betekent personalisatie in marketing? Geef één voorbeeld.",a:"Boodschappen afstemmen op individuele voorkeuren, bijvoorbeeld gepersonaliseerde e-mails of advertenties.",o:["Iedereen dezelfde boodschap sturen, ongeacht voorkeuren.","Boodschappen aanpassen aan individuele voorkeuren, bijvoorbeeld gepersonaliseerde e-mails of advertenties.","Een product in een fysieke winkel verkopen.","Een chatbot gebruiken om interne financiën te beheren."],k:1}
+];
+
+const exam = document.getElementById("exam");
+const result = document.getElementById("result");
+const mode = "mix";
+const mixedTypes = ["open","mc","open","mc","mc","open","mc","open","mc", "mc","open","mc","open","open","open","mc","open","mc","open", "open","mc","open","mc","mc","open","mc","open", "mc","open","mc","open","open","open","mc","open"];
+let submitted = false;
+function escapeHTML(text) { return text.replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[ch])); }
+function renderExam() {
+  submitted = false;
+  result.style.display = "none";
+  exam.innerHTML = "";
+  let html = "";
+  let previous = 0;
+  questions.forEach((item, idx) => {
+    if (item.c !== previous) { html += "<h2 class=\"chapter-title\">" + chapterNames[item.c] + "</h2>"; previous = item.c; }
+    html += "<article class=\"question\" id=\"q" + idx + "\"><h3><span class=\"number\">" + String(idx+1).padStart(2,"0") + "</span>" + escapeHTML(item.q) + "</h3>";
+    const questionType = mode === "mix" ? mixedTypes[idx] : mode;
+    if (questionType === "mc") {
+      html += "<div class=\"options\">" + item.o.map((option, optIndex) => "<label class=\"option\"><input type=\"radio\" name=\"answer" + idx + "\" value=\"" + optIndex + "\"><span>" + escapeHTML(option) + "</span></label>").join("") + "</div>";
+    } else {
+      html += "<textarea name=\"answer" + idx + "\" aria-label=\"Antwoord op vraag " + (idx+1) + "\" placeholder=\"Schrijf je antwoord hier…\"></textarea>";
+    }
+    html += "<div class=\"mark\"></div><div class=\"model\"><strong>Modelantwoord</strong><span>" + escapeHTML(item.a) + "</span></div></article>";
+  });
+  exam.innerHTML = html;
+  exam.classList.remove("hidden");
+  document.getElementById("submitRow").classList.remove("hidden");
+  document.getElementById("submitNote").textContent = "Meerkeuze wordt automatisch gescoord; vergelijk je open antwoorden met de modelantwoorden.";
+  document.getElementById("submit").disabled = false;
+}
+function submitExam() {
+  if (submitted) return;
+  submitted = true;
+  let score = 0;
+  let mcTotal = 0;
+  let openAnswered = 0;
+  let openTotal = 0;
+  questions.forEach((item, idx) => {
+    const article = document.getElementById("q" + idx);
+    const model = article.querySelector(".model");
+    const mark = article.querySelector(".mark");
+    model.style.display = "block";
+    const questionType = mode === "mix" ? mixedTypes[idx] : mode;
+    if (questionType === "mc") {
+      mcTotal++;
+      const selected = exam.querySelector("input[name=\"answer" + idx + "\"]:checked");
+      if (selected && Number(selected.value) === item.k) {
+        score++;
+        article.classList.add("correct");
+        mark.textContent = "Juist";
+      } else {
+        article.classList.add("incorrect");
+        mark.textContent = selected ? "Niet juist — bekijk het modelantwoord." : "Niet ingevuld — bekijk het modelantwoord.";
+      }
+      article.querySelectorAll("input").forEach(input => input.disabled = true);
+    } else {
+      openTotal++;
+      const textarea = article.querySelector("textarea");
+      if (textarea.value.trim()) openAnswered++;
+      textarea.disabled = true;
+    }
+  });
+  result.innerHTML = "<h2>Examen ingeleverd</h2><p>Meerkeuze: " + score + "/" + mcTotal + " juist (" + Math.round(score/mcTotal*100) + "%). Open vragen: " + openAnswered + "/" + openTotal + " ingevuld. Vergelijk je open antwoorden met de modelantwoorden onder de vragen.</p>";
+  result.style.display = "block";
+  document.getElementById("submit").disabled = true;
+  result.scrollIntoView({behavior:"smooth",block:"start"});
+}
+document.getElementById("start").addEventListener("click", renderExam);
+document.getElementById("submit").addEventListener("click", submitExam);
+document.getElementById("restart").addEventListener("click", renderExam);
+</script>
+</body>
+</html>
