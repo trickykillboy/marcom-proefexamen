@@ -1,0 +1,17 @@
+name = "marcom-study-chat"
+main = "src/index.js"
+compatibility_date = "2026-10-24"
+
+[observability]
+enabled = true
+
+[secrets]
+required = ["OPENAI_API_KEY"]
+
+[[ratelimits]]
+name = "CHAT_RATE_LIMITER"
+namespace_id = "2610247031"
+
+[ratelimits.simple]
+limit = 8
+period = 60
